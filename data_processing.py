@@ -11,20 +11,21 @@ column = ['unit number', 'time, in cycles', 'operational setting 1', 'operationa
           'sensor measurement  12', 'sensor measurement  13', 'sensor measurement  14', 'sensor measurement  15',
           'sensor measurement  16', 'sensor measurement  17', 'sensor measurement  18', 'sensor measurement  19',
           'sensor measurement  20', 'sensor measurement  21']
-df = pd.DataFrame(columns=['sub_dataset'] + column + ['rul', 'real_rul'])
+df = pd.DataFrame(columns=['sub_dataset'] + column)
 rul = []
 for i in tqdm(range(4)):
     x = np.loadtxt(dir_name + "train_FD00" + str(i + 1) + ".txt")
     y = np.loadtxt(dir_name + "test_FD00" + str(i + 1) + ".txt")
-    for j in range(21):
-        if x[:, -j].max() == x[:, -j].min():
+    for j in range(1,22,1):
+        a, b = max(x[:, -j].max(), y[:, -j].max()), min(x[:, -j].min(), y[:, -j].min())
+        if a == b:
             x[:, -j] = np.zeros(len(x))
-        if x[:, -j].max() != x[:, -j].min():
-            x[:, -j] = 2 * (x[:, -j] - x[:, -j].min()) / (x[:, -j].max() - x[:, -j].min()) - 1
-        if y[:, -j].max() == y[:, -j].min():
             y[:, -j] = np.zeros(len(y))
-        if y[:, -j].max() != y[:, -j].min():
-            y[:, -j] = 2 * (y[:, -j] - y[:, -j].min()) / (y[:, -j].max() - y[:, -j].min()) - 1
+        if a != b:
+            x[:, -j] = 2 * (x[:, -j] - b) / (a - b) - 1
+            y[:, -j] = 2 * (y[:, -j] - b) / (a - b) - 1
+        # if y[:, -j].max() == y[:, -j].min():
+        # if y[:, -j].max() != y[:, -j].min():
     x = pd.concat([pd.DataFrame(['train_FD00' + str(i + 1)] * len(x), columns=['sub_dataset']),
                    pd.DataFrame(x, columns=column)], axis=1)
     y = pd.concat([pd.DataFrame(['test_FD00' + str(i + 1)] * len(y), columns=['sub_dataset']),
@@ -44,6 +45,10 @@ def label(cycle, remain):
 
 train_RUL = pd.DataFrame(columns=['rul'])
 train_RUL_real = pd.DataFrame(columns=['real_rul'])
+test_RUL = pd.DataFrame(columns=['rul'])
+test_RUL_real = pd.DataFrame(columns=['real_rul'])
+RUL = pd.DataFrame(columns=['rul'])
+RUL_real = pd.DataFrame(columns=['real_rul'])
 for i in tqdm(range(4)):
     x = df[df.loc[:, 'sub_dataset'] == 'train_FD00' + str(i + 1)]
     for j in range(int(x.loc[:, 'unit number'].max())):
@@ -53,9 +58,8 @@ for i in tqdm(range(4)):
         n = pd.DataFrame(n, columns=['real_rul'])
         train_RUL = pd.concat([train_RUL, m], axis=0)
         train_RUL_real = pd.concat([train_RUL_real, n], axis=0)
-test_RUL = pd.DataFrame(columns=['rul'])
-test_RUL_real = pd.DataFrame(columns=['real_rul'])
-for i in tqdm(range(4)):
+    RUL=pd.concat([RUL,train_RUL],axis=0)
+    RUL_real=pd.concat([RUL_real,train_RUL_real],axis=0)
     x = df[df.loc[:, 'sub_dataset'] == 'test_FD00' + str(i + 1)]
     for j in range(int(x.loc[:, 'unit number'].max())):
         y = x[x.loc[:, 'unit number'] == j + 1].loc[:, 'time, in cycles']
@@ -64,10 +68,10 @@ for i in tqdm(range(4)):
         n = pd.DataFrame(n, columns=['real_rul'])
         test_RUL = pd.concat([test_RUL, m], axis=0)
         test_RUL_real = pd.concat([test_RUL_real, n], axis=0)
+    RUL = pd.concat([RUL, test_RUL], axis=0)
+    RUL_real = pd.concat([RUL_real, test_RUL_real], axis=0)
 
-RUL = pd.concat([train_RUL, test_RUL], axis=0)
 RUL.reset_index(drop=True, inplace=True)
-RUL_real = pd.concat([train_RUL_real, test_RUL_real], axis=0)
 RUL_real.reset_index(drop=True, inplace=True)
 df.reset_index(drop=True, inplace=True)
 df = pd.concat([df, RUL, RUL_real], axis=1)

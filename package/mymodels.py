@@ -1,5 +1,5 @@
 from keras.layers import Input, Dense, Dropout, LSTM, Bidirectional, Flatten, Concatenate, Reshape, RepeatVector, \
-    Conv2D, SeparableConv2D
+    Conv2D, SeparableConv2D,BatchNormalization,Activation,concatenate,AveragePooling2D
 from keras.models import Model
 from matplotlib import pyplot as plt
 from keras import backend as K
@@ -147,3 +147,64 @@ def blstmattentionv1(step_size):
     y = Dense(20, activation='tanh')(y)
     y = Dense(1)(y)
     return Model(x, y)
+
+
+def dense_block(x, i, j, dropout_rate):
+    x1 = x
+    x = BatchNormalization(axis=3)(x1)
+    x = Activation('relu')(x)
+    x2 = Conv2D(i, (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x2 = Dropout(dropout_rate)(x2)
+    x3 = concatenate([x1, x2], axis=3)
+    x = BatchNormalization(axis=3)(x3)
+    x = Activation('relu')(x)
+    x4 = Conv2D(i, (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x4 = Dropout(dropout_rate)(x4)
+    x5 = concatenate([x2, x4], axis=3)
+    x = BatchNormalization(axis=3)(x5)
+    x = Activation('relu')(x)
+    x6 = Conv2D(i, (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x6 = Dropout(dropout_rate)(x6)
+    x7 = concatenate([x4, x6], axis=3)
+    x = BatchNormalization(axis=3)(x7)
+    x = Activation('relu')(x)
+    x8 = Conv2D(i, (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x8 = Dropout(dropout_rate)(x8)
+    x9 = concatenate([x6, x8], axis=3)
+    x = BatchNormalization(axis=3)(x9)
+    x = Activation('relu')(x)
+    x10 = Conv2D(i, (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x10 = Dropout(dropout_rate)(x10)
+    x11 = concatenate([x8, x10], axis=3)
+    return x11
+
+
+def transition_block(x, i, j, dropout_rate):
+    x = BatchNormalization(axis=3)(x)
+    x = Activation('relu')(x)
+    x = Conv2D(int(i / 2), (j, j), padding='same', strides=(1, 1))(x)
+    if dropout_rate:
+        x = Dropout(dropout_rate)(x)
+    x = AveragePooling2D(pool_size=(3, 3), strides=None, padding='same')(x)
+    return x
+
+
+def DenseModel(step_size):
+    # 构建模型
+    inputs = Input(shape=(step_size, 14, 1))
+    i = 2
+    j = 2
+    x = inputs
+    x = dense_block(x, i, j, 0.0)
+    x = transition_block(x, i, j, 0.0)
+    x = Flatten()(x)
+    x = Dense(200, activation='tanh')(x)
+    x = Dense(1)(x)
+    model = Model(inputs=inputs, outputs=x)
+    model.summary()
+    return model

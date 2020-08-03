@@ -99,7 +99,7 @@ train_input, train_output1, train_output2, test_input, test_output1, test_output
     = sequence(subdataset, stepsize, overslap)
 
 # model = lstm(stepsize)
-model = lstmattentionv1(stepsize)
+model = blstmattentionv1(stepsize)
 # model = lstmencoderdecoderattentionv1(stepsize)
 # model = onedimcnn(stepsize)
 # model = sepcnn(stepsize)
